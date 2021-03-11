@@ -2,21 +2,18 @@ const mysql = require("mysql");
 const inquirer = require("inquirer");
 const consTable = require("console.table");
 const dotenv = require("dotenv");
-const { mainModule } = require("node:process");
 
-const PORT = process.env.PORT | 3001;
-
-const database = mysql.createConnection({
+const app = mysql.createConnection({
   host: "localhost",
-  port: PORT,
+  port: 3306,
   user: "root",
   password: "root",
   database: "employee_db",
 });
 
-database.connect((err) => {
+app.connect((err) => {
   if (err) throw err;
-  main();
+  start();
 });
 
 const mainQs = [
@@ -39,7 +36,7 @@ const mainQs = [
     name: "viewE",
     message: "How would you like to view your employees?",
     type: "list",
-    choices: ["All Employees", "Search by Manager", "Search by Department"],
+    choices: ["All Employees", "Search by Department"],
   },
   {
     name: "EditE",
@@ -62,51 +59,74 @@ const mainQs = [
 ];
 
 const employeeQs = [
-    {
-        name: "manager",
-        message: "Please select a manager: ",
-
-    }
-]
+  {
+    name: "manager",
+    message: "Please select a manager: ",
+  },
+];
 
 function viewEmployees() {
-    inquirer.prompt(mainQs[1])
-    .then((data) => {
-        switch(data.viewE) {
-            case "All Employees":
-                database.query("SELECT * FROM employees", (err, res) => {
-                    if (err) throw err;
-                    console.table(res);
-                    main();
-                })
-                break
-            case "Search by Manager":
-                database.query("SELECT id, CONCAT(first_name, ' ', last_name) AS manager FROM employees where ismanager IS true", (err, res) => {
-                    if (err) throw err;
-                    inquirer.prompt({
-                        name: "manager",
-                        message: "Please select a manager: ",
-                        type: "list",
-                        choices: res.manager,
-                    })
-                    .then((data) => {
-                        database.query(`SELECT * FROM employees WHERE employees.manager_id = ${res.id}`, (err, res) => {
-                            if (err) throw err;
-                            console.table(res);
-                            main();
-                        })
-                    })
-                })
-                
-            case"Search by Department":
-        }
-    })
+  inquirer.prompt(mainQs[1]).then((data) => {
+    switch (data.viewE) {
+      case "All Employees":
+        app.query("SELECT * FROM employees", (err, res) => {
+          if (err) throw err;
+          console.table(res);
+          start();
+        });
+        break;
+      case "Search by Department":
+        app.query("SELECT id, name FROM departments", (err, res) => {
+          if (err) throw err;
+          const departments = res.map((department) => department.name);
+          inquirer
+            .prompt({
+              name: "department",
+              message: "Please select a department: ",
+              type: "list",
+              choices: departments,
+            })
+            .then( async (data) => {
+              const departmentID = await app.query(`(SELECT id FROM departments WHERE departments.name = "${data.department}")`, (err, res) => {
+              }).id;
+              console.log(departmentID)
+              const roleID = await app.query(`(SELECT id FROM roles WHERE roles.dep_id = ${departmentID})`)
+              const employees = await app.query(`(SELECT * FROM EMPLOYEES WHERE role_id = ${roleID})`)
+              console.table(employees)
+            });
+        });
+    }
+  });
+}
+
+function viewRoles() {
+  app.query("SELECT * FROM roles", (err, res) => {
+    if (err) throw err;
+    console.table(res);
+    start();
+  });
+}
+
+function viewDepartments() {
+  app.query("SELECT * FROM departments", (err, res) => {
+    if (err) throw err;
+    console.table(res);
+    start();
+  });
 }
 
 function start() {
   inquirer.prompt(mainQs[0]).then((data) => {
     switch (data.main) {
       case "View Employees":
+        viewEmployees();
+        break;
+      case "View Roles":
+        viewRoles();
+        break;
+      case "View Departments":
+        viewDepartments();
+        break;
     }
   });
 }

@@ -2,24 +2,29 @@ DROP DATABASE IF EXISTS employee_db;
 
 CREATE DATABASE employee_db;
 
-USE employee_trackerDB;
+USE employee_db;
 
-CREATE TABLE role (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    job VARCHAR(100),
-    salary INTEGER NOT NULL,
-    dep_id INTEGER FOREIGN KEY REFERENCES department(id),
-);
-
-CREATE TABLE department (
+CREATE TABLE departments (
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100)
 );
-CREATE TABLE employee (
+
+CREATE TABLE roles (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    job VARCHAR(100),
+    salary INTEGER NOT NULL,
+    dep_id INTEGER,
+    FOREIGN KEY (dep_id) REFERENCES departments(id)
+);
+
+
+CREATE TABLE employees (
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
-    role_id INTEGER FOREIGN KEY REFERENCES role(id),
-    manager_id INTEGER FOREIGN KEY REFERENCES employee(id)
+    role_id INTEGER,
+    manager_id INTEGER,
     ismanager BOOLEAN,
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (manager_id) REFERENCES employees(id)
 );
