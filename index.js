@@ -159,17 +159,6 @@ function viewRoles() {
 }
 
 function viewDepartments() {
-  // app.query(
-  //   `SELECT departments.id, departments.name, SUM(roles.salary) AS budget
-  //   FROM departments
-  //   INNER JOIN roles ON roles.dep_id = departments.id
-  //   ORDER by id ASC`,
-  //   (err, res) => {
-  //     if (err) throw err;
-  //     console.table(res);
-  //     start();
-  //   }
-  // );
   app.query(
     "SELECT * FROM departments;",
     async (err, res) => {
