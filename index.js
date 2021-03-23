@@ -25,7 +25,6 @@ const mainQs = [
       "View Employees",
       "View Roles",
       "View Departments",
-      "View Department's budget utilization",
       "Edit Employees",
       "Edit Roles",
       "Edit Departments",
@@ -36,7 +35,7 @@ const mainQs = [
     name: "viewE",
     message: "How would you like to view your employees?",
     type: "list",
-    choices: ["All Employees", "Search by Department"],
+    choices: ["All Employees", "Search by Manager"],
   },
   {
     name: "EditE",
@@ -69,32 +68,56 @@ function viewEmployees() {
   inquirer.prompt(mainQs[1]).then((data) => {
     switch (data.viewE) {
       case "All Employees":
-        app.query("SELECT * FROM employees", (err, res) => {
-          if (err) throw err;
-          console.table(res);
-          start();
-        });
+        app.query(
+          `SELECT employees.id, concat(employees.first_name, " ", employees.last_name) AS name, roles.job, departments.name AS department, roles.salary FROM employees
+          INNER JOIN roles ON employees.role_id = roles.id
+          INNER JOIN departments ON roles.dep_id = departments.id
+          ORDER BY id ASC;`,
+          (err, res) => {
+            if (err) throw err;
+            console.log;
+            console.table(res);
+            start();
+          }
+        );
         break;
-      case "Search by Department":
-        app.query("SELECT id, name FROM departments", (err, res) => {
-          if (err) throw err;
-          const departments = res.map((department) => department.name);
-          inquirer
-            .prompt({
-              name: "department",
-              message: "Please select a department: ",
-              type: "list",
-              choices: departments,
-            })
-            .then( async (data) => {
-              const departmentID = await app.query(`(SELECT id FROM departments WHERE departments.name = "${data.department}")`, (err, res) => {
-              }).id;
-              console.log(departmentID)
-              const roleID = await app.query(`(SELECT id FROM roles WHERE roles.dep_id = ${departmentID})`)
-              const employees = await app.query(`(SELECT * FROM EMPLOYEES WHERE role_id = ${roleID})`)
-              console.table(employees)
-            });
-        });
+      case "Search by Manager":
+        app.query(
+          "SELECT id AS manager_id, CONCAT(first_name, ' ', last_name) AS name FROM employees WHERE ismanager IS TRUE;",
+          async (err, res) => {
+            var names = await res.map((manager) => manager.name);
+            inquirer
+              .prompt({
+                name: "manager",
+                message: "Which manager's employees would you like to view?",
+                type: "list",
+                choices: names,
+              })
+              .then((answers) => {
+                let selectID;
+                for (i = 0; i < res.length; i++) {
+                  if (answers.manager === res[i].name) {
+                    selectID = res[i].manager_id;
+                  }
+                }
+                app.query(
+                  `SELECT employees.id, concat(employees.first_name, " ", employees.last_name) AS name, roles.job, departments.name AS department, roles.salary FROM employees
+                  INNER JOIN roles ON employees.role_id = roles.id
+                  INNER JOIN departments ON roles.dep_id = departments.id
+                  WHERE employees.manager_id = ${selectID}
+                  ORDER BY id ASC;`,
+                  (err, employees) => {
+                    console.log(
+                      `Employees under the manager: ${answers.manager}`
+                    );
+                    console.table(employees);
+                    start();
+                  }
+                );
+              });
+          }
+        );
+        break;
     }
   });
 }
