@@ -75,8 +75,16 @@ function viewEmployees() {
           ORDER BY id ASC;`,
           (err, res) => {
             if (err) throw err;
-            console.log;
+            console.log();
+            console.log(
+              "---------------------------------------------------------------------------------------"
+            );
+            console.log("ALL EMPLOYEES");
+            console.log(
+              "---------------------------------------------------------------------------------------"
+            );
             console.table(res);
+            console.log();
             start();
           }
         );
@@ -100,6 +108,7 @@ function viewEmployees() {
                     selectID = res[i].manager_id;
                   }
                 }
+                console.log();
                 app.query(
                   `SELECT employees.id, concat(employees.first_name, " ", employees.last_name) AS name, roles.job, departments.name AS department, roles.salary FROM employees
                   INNER JOIN roles ON employees.role_id = roles.id
@@ -108,7 +117,13 @@ function viewEmployees() {
                   ORDER BY id ASC;`,
                   (err, employees) => {
                     console.log(
-                      `Employees under the manager: ${answers.manager}`
+                      "---------------------------------------------------------------------------------------"
+                    );
+                    console.log(
+                      `EMPLOYEES UNDER THE MANAGER: ${answers.manager}`
+                    );
+                    console.log(
+                      "---------------------------------------------------------------------------------------"
                     );
                     console.table(employees);
                     start();
@@ -123,19 +138,81 @@ function viewEmployees() {
 }
 
 function viewRoles() {
-  app.query("SELECT * FROM roles", (err, res) => {
-    if (err) throw err;
-    console.table(res);
-    start();
-  });
+  app.query(
+    `SELECT roles.id, roles.job, roles.salary, departments.name AS department
+    FROM roles
+    INNER JOIN departments ON roles.dep_id = departments.id
+    ORDER by department ASC`,
+    (err, res) => {
+      if (err) throw err;
+      console.log(
+        "---------------------------------------------------------------------------------------"
+      );
+      console.log(`ALL ROLES`);
+      console.log(
+        "---------------------------------------------------------------------------------------"
+      );
+      console.table(res);
+      start();
+    }
+  );
 }
 
 function viewDepartments() {
-  app.query("SELECT * FROM departments", (err, res) => {
-    if (err) throw err;
-    console.table(res);
-    start();
-  });
+  // app.query(
+  //   `SELECT departments.id, departments.name, SUM(roles.salary) AS budget
+  //   FROM departments
+  //   INNER JOIN roles ON roles.dep_id = departments.id
+  //   ORDER by id ASC`,
+  //   (err, res) => {
+  //     if (err) throw err;
+  //     console.table(res);
+  //     start();
+  //   }
+  // );
+  app.query(
+    "SELECT * FROM departments;",
+    async (err, res) => {
+      var names = await res.map((departments) => departments.name);
+      inquirer
+        .prompt({
+          name: "department",
+          message: "Which manager's employees would you like to view?",
+          type: "list",
+          choices: names,
+        })
+        .then((answers) => {
+          let selectID;
+          for (i = 0; i < res.length; i++) {
+            if (answers.department === res[i].name) {
+              selectID = res[i].id;
+            }
+          }
+          console.log();
+          app.query(
+            `SELECT departments.id, departments.name, SUM(roles.salary) AS budget
+            FROM departments
+            INNER JOIN roles ON departments.id = roles.dep_id
+            GROUP BY id
+            ORDER BY id ASC;`,
+            (err, dep) => {
+              if (err) throw (err);
+              console.log(
+                "---------------------------------------------------------------------------------------"
+              );
+              console.log(
+                `${answers.department}`
+              );
+              console.log(
+                "---------------------------------------------------------------------------------------"
+              );
+              console.table(dep);
+              start();
+            }
+          );
+        });
+    }
+  );
 }
 
 function start() {
