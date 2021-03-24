@@ -57,7 +57,6 @@ const mainQs = [
   },
 ];
 
-
 function viewEmployees() {
   inquirer.prompt(mainQs[1]).then((data) => {
     switch (data.viewE) {
@@ -155,41 +154,26 @@ function viewRoles() {
 function viewDepartments() {
   app.query("SELECT * FROM departments;", async (err, res) => {
     var names = await res.map((departments) => departments.name);
-    inquirer
-      .prompt({
-        name: "department",
-        message: "Which manager's employees would you like to view?",
-        type: "list",
-        choices: names,
-      })
-      .then((answers) => {
-        let selectID;
-        for (i = 0; i < res.length; i++) {
-          if (answers.department === res[i].name) {
-            selectID = res[i].id;
-          }
-        }
-        console.log();
-        app.query(
-          `SELECT departments.id, departments.name, SUM(roles.salary) AS budget
+    console.log();
+    app.query(
+      `SELECT departments.id, departments.name, IFNULL(SUM(roles.salary),0) AS budget
             FROM departments
-            INNER JOIN roles ON departments.id = roles.dep_id
+            LEFT JOIN roles ON departments.id = roles.dep_id
             GROUP BY id
             ORDER BY id ASC;`,
-          (err, dep) => {
-            if (err) throw err;
-            console.log(
-              "---------------------------------------------------------------------------------------"
-            );
-            console.log(`${answers.department}`);
-            console.log(
-              "---------------------------------------------------------------------------------------"
-            );
-            console.table(dep);
-            start();
-          }
+      (err, dep) => {
+        if (err) throw err;
+        console.log(
+          "---------------------------------------------------------------------------------------"
         );
-      });
+        console.log(`DEPARTMENTS`);
+        console.log(
+          "---------------------------------------------------------------------------------------"
+        );
+        console.table(dep);
+        start();
+      }
+    );
   });
 }
 
@@ -247,6 +231,7 @@ function editEmployees() {
                           console.log(
                             `${answers.employee} has been moved to the role : ${jobs.roleChoice}`
                           );
+                          start();
                         }
                       );
                     });
@@ -298,16 +283,14 @@ function editEmployees() {
                 } else {
                   isManager = 0;
                 }
-                app
-                  .query(
-                    `INSERT INTO employees (first_name, last_name, role_id, ismanager)
-                  VALUES ('${employee.first}','${employee.last}',${roleID},${isManager});`
-                  )
-                  .then((err) => {
-                    if (err) throw err;
+                app.query(
+                  `INSERT INTO employees (first_name, last_name, role_id, ismanager)
+                  VALUES ('${employee.first}','${employee.last}',${roleID},${isManager});`,
+                  (result) => {
                     console.log(`Employee added!`);
                     start();
-                  });
+                  }
+                );
               });
           }
         );
@@ -325,7 +308,6 @@ function editEmployees() {
                 choices: employeeList,
               })
               .then((remove) => {
-                console.log(remove);
                 let removeID;
                 for (i = 0; i < res.length; i++) {
                   if (remove.employee === res[i].name) {
@@ -391,6 +373,7 @@ function editRoles() {
               );
             });
         });
+        break;
       case "Remove":
         app.query(`SELECT * FROM roles;`, async (err, res) => {
           var roleList = await res.map((role) => role.job);
@@ -419,66 +402,75 @@ function editRoles() {
               );
             });
         });
+        break;
     }
   });
 }
 
 function editDepartments() {
-  inquirer.prompt(mainQs[4]).then((data) => {
-    switch (data.EditD) {
-      case "Add":
-        console.log(data.EditD);
-        inquirer
-        .prompt([
-          {
-            name: "dep",
-            message: "Enter new departments name: ",
-            type: "input",
-          },
-        ])
-        .then((dep) => {
-            console.log(dep);
-            app.query(
-              `INSERT INTO departments (name)
-                VALUES ('${dep.dep}');`,
-              (err) => {
-                if (err) throw err;
-                console.log(`${dep.dep} has been added!`);
-                start();
-              }
-            );
-          });
-
-      case "Remove":
-        app.query(`SELECT * FROM departments;`, async (err, res) => {
-          var depList = await res.map((dep) => dep.job);
+  inquirer
+    .prompt({
+      name: "Edit",
+      message: "How would you like to edit your Department?",
+      type: "list",
+      choices: ["Add", "Remove"],
+    })
+    .then((data) => {
+      switch (data.Edit) {
+        case "Add":
+          console.log(data.Edit);
           inquirer
-            .prompt({
-              name: "dep",
-              message: "Select a department to delete: ",
-              type: "list",
-              choices: depList,
-            })
-            .then((remove) => {
-              let depID;
-              for (i = 0; i < res.length; i++) {
-                if (remove.dep === res[i].name) {
-                  dep = res[i].id;
-                }
-              }
+            .prompt([
+              {
+                name: "dep",
+                message: "Enter new departments name: ",
+                type: "input",
+              },
+            ])
+            .then((dep) => {
+              console.log(dep);
               app.query(
-                `DELETE FROM departments
-                  WHERE id = ${depID};`,
+                `INSERT INTO departments (name)
+                  VALUES ('${dep.dep}');`,
                 (err) => {
                   if (err) throw err;
-                  console.log(`${remove.dep} removed!`);
+                  console.log(`${dep.dep} has been added!`);
                   start();
                 }
               );
             });
-        });
-    }
-  });
+          break;
+        case "Remove":
+          app.query(`SELECT * FROM departments;`, async (err, res) => {
+            var depList = await res.map((dep) => dep.name);
+            console.log(depList);
+            inquirer
+              .prompt({
+                name: "dep",
+                message: "Select a department to delete: ",
+                type: "list",
+                choices: depList,
+              })
+              .then((remove) => {
+                let depID;
+                for (i = 0; i < res.length; i++) {
+                  if (remove.dep === res[i].name) {
+                    depID = res[i].id;
+                  }
+                }
+                app.query(
+                  `DELETE FROM departments
+                  WHERE id = ${depID};`,
+                  (err) => {
+                    if (err) throw err;
+                    console.log(`${remove.dep} removed!`);
+                    start();
+                  }
+                );
+              });
+          });
+      }
+    });
 }
 
 function start() {
