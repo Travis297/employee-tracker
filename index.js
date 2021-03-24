@@ -57,12 +57,6 @@ const mainQs = [
   },
 ];
 
-const employeeQs = [
-  {
-    name: "manager",
-    message: "Please select a manager: ",
-  },
-];
 
 function viewEmployees() {
   inquirer.prompt(mainQs[1]).then((data) => {
@@ -357,9 +351,7 @@ function editRoles() {
   inquirer.prompt(mainQs[3]).then((data) => {
     switch (data.EditR) {
       case "Add":
-        app.query(
-          `SELECT * FROM departments;`,
-          async (err, res) => {
+        app.query(`SELECT * FROM departments;`, async (err, res) => {
           if (err) throw err;
           var depList = await res.map((dep) => dep.name);
           inquirer
@@ -399,39 +391,92 @@ function editRoles() {
               );
             });
         });
-        case "Remove":
-          app.query(
-            `SELECT * FROM roles;`,
-            async (err, res) => {
-              console.log(res)
-              var roleList = await res.map((role) => role.job);
-              inquirer
-              .prompt([
-                {
-                  name: "role",
-                  message: "Select a role to delete: ",
-                  type: "list",
-                  choices: roleList,
-                },
-              ]).then((remove) => {
-                let roleID;
-                for (i = 0; i < res.length; i++) {
-                  if (remove.role === res[i].job) {
-                    roleID = res[i].id;
-                  }
+      case "Remove":
+        app.query(`SELECT * FROM roles;`, async (err, res) => {
+          var roleList = await res.map((role) => role.job);
+          inquirer
+            .prompt({
+              name: "role",
+              message: "Select a role to delete: ",
+              type: "list",
+              choices: roleList,
+            })
+            .then((remove) => {
+              let roleID;
+              for (i = 0; i < res.length; i++) {
+                if (remove.role === res[i].job) {
+                  roleID = res[i].id;
                 }
-                app.query(
-                  `DELETE FROM roles
+              }
+              app.query(
+                `DELETE FROM roles
                   WHERE id = ${roleID}`,
-                  (err) => {
-                    if (err) throw err;
-                    console.log(`${remove.role} removed!`);
-                    start();
-                  }
-                )
-              })
-            }
-          )
+                (err) => {
+                  if (err) throw err;
+                  console.log(`${remove.role} removed!`);
+                  start();
+                }
+              );
+            });
+        });
+    }
+  });
+}
+
+function editDepartments() {
+  inquirer.prompt(mainQs[4]).then((data) => {
+    switch (data.EditD) {
+      case "Add":
+        console.log(data.EditD);
+        inquirer
+        .prompt([
+          {
+            name: "dep",
+            message: "Enter new departments name: ",
+            type: "input",
+          },
+        ])
+        .then((dep) => {
+            console.log(dep);
+            app.query(
+              `INSERT INTO departments (name)
+                VALUES ('${dep.dep}');`,
+              (err) => {
+                if (err) throw err;
+                console.log(`${dep.dep} has been added!`);
+                start();
+              }
+            );
+          });
+
+      case "Remove":
+        app.query(`SELECT * FROM departments;`, async (err, res) => {
+          var depList = await res.map((dep) => dep.job);
+          inquirer
+            .prompt({
+              name: "dep",
+              message: "Select a department to delete: ",
+              type: "list",
+              choices: depList,
+            })
+            .then((remove) => {
+              let depID;
+              for (i = 0; i < res.length; i++) {
+                if (remove.dep === res[i].name) {
+                  dep = res[i].id;
+                }
+              }
+              app.query(
+                `DELETE FROM departments
+                  WHERE id = ${depID};`,
+                (err) => {
+                  if (err) throw err;
+                  console.log(`${remove.dep} removed!`);
+                  start();
+                }
+              );
+            });
+        });
     }
   });
 }
@@ -453,6 +498,9 @@ function start() {
         break;
       case "Edit Roles":
         editRoles();
+        break;
+      case "Edit Departments":
+        editDepartments();
         break;
     }
   });

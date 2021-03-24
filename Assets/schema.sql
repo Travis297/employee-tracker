@@ -15,6 +15,7 @@ CREATE TABLE roles (
     salary INTEGER NOT NULL,
     dep_id INTEGER,
     FOREIGN KEY (dep_id) REFERENCES departments(id)
+    ON DELETE CASCADE
 );
 
 
