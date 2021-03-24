@@ -204,6 +204,94 @@ function viewDepartments() {
   );
 }
 
+
+function editEmployees() {
+  inquirer.prompt(mainQs[2]).then((data) => {
+    switch (data.EditE) {
+      case "Update":
+        app.query(
+          `SELECT employees.id, concat(employees.first_name, " ", employees.last_name) AS name, roles.job, departments.name AS department, roles.salary FROM employees
+          INNER JOIN roles ON employees.role_id = roles.id
+          INNER JOIN departments ON roles.dep_id = departments.id
+          ORDER BY id ASC;`,
+          async (err, res) => {
+            if (err) throw err;
+            var names = await res.map((employee) => employee.name);
+            inquirer.prompt({
+              name: "employee",
+              message: "Which employee would you like to change?",
+              type: "list",
+              choices: names,
+            })
+            .then((answers) => {
+              let selectID;
+              for (i = 0; i < res.length; i++) {
+                if (answers.employee === res[i].name) {
+                  selectID = res[i].id;
+                }
+              }
+              console.log(`Select a new role for ${answers.employee}`)
+              app.query(
+                `SELECT * FROM roles;`,
+                async (err, roles) => {
+                  var roleList = await roles.map((role) => role.job);
+                  // console.log(roles)
+                  inquirer
+                  .prompt({
+                    name: "roleChoice",
+                    message: "What role would you like to give your employee?",
+                    type: "list",
+                    choices: roleList,
+                  })
+                  .then((jobs) => {
+                    let roleID;
+                    for (i = 0; i < roles.length; i++) {
+                      if (jobs.roleChoice === roles[i].job) {
+                        roleID = roles[i].id;
+                      }
+                    }
+                    app.query(
+                      `UPDATE employees
+                      SET role_id = ${roleID}
+                      WHERE id = ${selectID};`,
+                      (err) => {
+                        if (err) throw err;
+                        console.log(`${answers.employee} has been moved to the role : ${jobs.roleChoice}`)
+                      }
+                    )
+                  })
+                }
+              )
+            })
+          }
+        );
+        break;
+    }
+  });
+}
+
+// function editRoles() {
+//   app.query(
+//     `SELECT roles.id, roles.job, roles.salary, departments.name AS department
+//     FROM roles
+//     INNER JOIN departments ON roles.dep_id = departments.id
+//     ORDER by department ASC`,
+//     (err, res) => {
+//       if (err) throw err;
+//       console.log(
+//         "---------------------------------------------------------------------------------------"
+//       );
+//       console.log(`ALL ROLES`);
+//       console.log(
+//         "---------------------------------------------------------------------------------------"
+//       );
+//       console.table(res);
+//       start();
+//     }
+//   );
+// }
+
+
 function start() {
   inquirer.prompt(mainQs[0]).then((data) => {
     switch (data.main) {
@@ -215,6 +303,9 @@ function start() {
         break;
       case "View Departments":
         viewDepartments();
+        break;
+      case "Edit Employees":
+        editEmployees();
         break;
     }
   });
