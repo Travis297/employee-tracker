@@ -266,6 +266,92 @@ function editEmployees() {
           }
         );
         break;
+        case "Add":
+          app.query(
+            `SELECT id, job, dep_id
+            FROM roles`, 
+            async (err, res) => {
+              var roleList = await res.map((role) => role.job);
+              inquirer.prompt([
+                {
+                  name: "first",
+                  message: "Employee's first name: ",
+                  type: "input",
+                },
+                {
+                  name: "last",
+                  message: "Employee's last name: ",
+                  type: "input",
+                },
+                {
+                  name: "role",
+                  message: "Employee's first name: ",
+                  type: "list",
+                  choices: roleList,
+                },
+                {
+                  name: "managerBool",
+                  message: "Is this employee a manager? ",
+                  type: "confirm",
+                }
+              ])
+              .then((employee) => {
+                let roleID;
+                for (i = 0; i < res.length; i++) {
+                  if (employee.role === res[i].job) {
+                    roleID = res[i].id;
+                  }
+                }
+                let isManager
+                if (employee.managerBool) {
+                  isManager = 1
+                }
+                else {
+                  isManager = 0
+                }
+                app.query(
+                  `INSERT INTO employees (first_name, last_name, role_id, ismanager)
+                  VALUES ('${employee.first}','${employee.last}',${roleID},${isManager});`
+                )
+                .then((err) => {
+                  if (err) throw err;
+                  console.log(`Employee added!`)
+                  start();
+                })
+              })
+            })
+            break;
+            case "Remove":
+              app.query(
+                `SELECT id, concat(employees.first_name, " ", employees.last_name) AS name FROM employees;`,
+                async (err, res) => {
+                  var employeeList = await res.map((role) => role.name);
+                  inquirer
+                  .prompt({
+                    name: "employee",
+                    message: "Pick an employee to delete:",
+                    type: "list",
+                    choices: employeeList,
+                  })
+                  .then((remove) => {
+                    console.log(remove)
+                    let removeID;
+                    for (i = 0; i < res.length; i++) {
+                      if (remove.employee === res[i].name) {
+                        removeID = res[i].id;
+                      }
+                    }
+                    app.query(
+                      `DELETE FROM employees WHERE id = ${removeID}`,
+                      async (err) => {
+                        if (err) throw err;
+                        console.log(`${remove.employee} has been removed!`)
+                        start();
+                      }
+                    )
+                  })
+                }
+              )
     }
   });
 }
