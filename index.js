@@ -47,13 +47,13 @@ const mainQs = [
     name: "EditR",
     message: "How would you like to edit your Roles?",
     type: "list",
-    choices: ["Add", "Remove", "Update"],
+    choices: ["Add", "Remove"],
   },
   {
     name: "EditD",
     message: "How would you like to edit your Department?",
     type: "list",
-    choices: ["Add", "Remove", "Update"],
+    choices: ["Add", "Remove"],
   },
 ];
 
@@ -159,51 +159,45 @@ function viewRoles() {
 }
 
 function viewDepartments() {
-  app.query(
-    "SELECT * FROM departments;",
-    async (err, res) => {
-      var names = await res.map((departments) => departments.name);
-      inquirer
-        .prompt({
-          name: "department",
-          message: "Which manager's employees would you like to view?",
-          type: "list",
-          choices: names,
-        })
-        .then((answers) => {
-          let selectID;
-          for (i = 0; i < res.length; i++) {
-            if (answers.department === res[i].name) {
-              selectID = res[i].id;
-            }
+  app.query("SELECT * FROM departments;", async (err, res) => {
+    var names = await res.map((departments) => departments.name);
+    inquirer
+      .prompt({
+        name: "department",
+        message: "Which manager's employees would you like to view?",
+        type: "list",
+        choices: names,
+      })
+      .then((answers) => {
+        let selectID;
+        for (i = 0; i < res.length; i++) {
+          if (answers.department === res[i].name) {
+            selectID = res[i].id;
           }
-          console.log();
-          app.query(
-            `SELECT departments.id, departments.name, SUM(roles.salary) AS budget
+        }
+        console.log();
+        app.query(
+          `SELECT departments.id, departments.name, SUM(roles.salary) AS budget
             FROM departments
             INNER JOIN roles ON departments.id = roles.dep_id
             GROUP BY id
             ORDER BY id ASC;`,
-            (err, dep) => {
-              if (err) throw (err);
-              console.log(
-                "---------------------------------------------------------------------------------------"
-              );
-              console.log(
-                `${answers.department}`
-              );
-              console.log(
-                "---------------------------------------------------------------------------------------"
-              );
-              console.table(dep);
-              start();
-            }
-          );
-        });
-    }
-  );
+          (err, dep) => {
+            if (err) throw err;
+            console.log(
+              "---------------------------------------------------------------------------------------"
+            );
+            console.log(`${answers.department}`);
+            console.log(
+              "---------------------------------------------------------------------------------------"
+            );
+            console.table(dep);
+            start();
+          }
+        );
+      });
+  });
 }
-
 
 function editEmployees() {
   inquirer.prompt(mainQs[2]).then((data) => {
@@ -217,62 +211,64 @@ function editEmployees() {
           async (err, res) => {
             if (err) throw err;
             var names = await res.map((employee) => employee.name);
-            inquirer.prompt({
-              name: "employee",
-              message: "Which employee would you like to change?",
-              type: "list",
-              choices: names,
-            })
-            .then((answers) => {
-              let selectID;
-              for (i = 0; i < res.length; i++) {
-                if (answers.employee === res[i].name) {
-                  selectID = res[i].id;
+            inquirer
+              .prompt({
+                name: "employee",
+                message: "Which employee would you like to change?",
+                type: "list",
+                choices: names,
+              })
+              .then((answers) => {
+                let selectID;
+                for (i = 0; i < res.length; i++) {
+                  if (answers.employee === res[i].name) {
+                    selectID = res[i].id;
+                  }
                 }
-              }
-              console.log(`Select a new role for ${answers.employee}`)
-              app.query(
-                `SELECT * FROM roles;`,
-                async (err, roles) => {
+                console.log(`Select a new role for ${answers.employee}`);
+                app.query(`SELECT * FROM roles;`, async (err, roles) => {
                   var roleList = await roles.map((role) => role.job);
                   // console.log(roles)
                   inquirer
-                  .prompt({
-                    name: "roleChoice",
-                    message: "What role would you like to give your employee?",
-                    type: "list",
-                    choices: roleList,
-                  })
-                  .then((jobs) => {
-                    let roleID;
-                    for (i = 0; i < roles.length; i++) {
-                      if (jobs.roleChoice === roles[i].job) {
-                        roleID = roles[i].id;
+                    .prompt({
+                      name: "roleChoice",
+                      message:
+                        "What role would you like to give your employee?",
+                      type: "list",
+                      choices: roleList,
+                    })
+                    .then((jobs) => {
+                      let roleID;
+                      for (i = 0; i < roles.length; i++) {
+                        if (jobs.roleChoice === roles[i].job) {
+                          roleID = roles[i].id;
+                        }
                       }
-                    }
-                    app.query(
-                      `UPDATE employees
+                      app.query(
+                        `UPDATE employees
                       SET role_id = ${roleID}
                       WHERE id = ${selectID};`,
-                      (err) => {
-                        if (err) throw err;
-                        console.log(`${answers.employee} has been moved to the role : ${jobs.roleChoice}`)
-                      }
-                    )
-                  })
-                }
-              )
-            })
+                        (err) => {
+                          if (err) throw err;
+                          console.log(
+                            `${answers.employee} has been moved to the role : ${jobs.roleChoice}`
+                          );
+                        }
+                      );
+                    });
+                });
+              });
           }
         );
         break;
-        case "Add":
-          app.query(
-            `SELECT id, job, dep_id
-            FROM roles`, 
-            async (err, res) => {
-              var roleList = await res.map((role) => role.job);
-              inquirer.prompt([
+      case "Add":
+        app.query(
+          `SELECT id, job, dep_id
+            FROM roles`,
+          async (err, res) => {
+            var roleList = await res.map((role) => role.job);
+            inquirer
+              .prompt([
                 {
                   name: "first",
                   message: "Employee's first name: ",
@@ -293,7 +289,7 @@ function editEmployees() {
                   name: "managerBool",
                   message: "Is this employee a manager? ",
                   type: "confirm",
-                }
+                },
               ])
               .then((employee) => {
                 let roleID;
@@ -302,81 +298,143 @@ function editEmployees() {
                     roleID = res[i].id;
                   }
                 }
-                let isManager
+                let isManager;
                 if (employee.managerBool) {
-                  isManager = 1
+                  isManager = 1;
+                } else {
+                  isManager = 0;
                 }
-                else {
-                  isManager = 0
+                app
+                  .query(
+                    `INSERT INTO employees (first_name, last_name, role_id, ismanager)
+                  VALUES ('${employee.first}','${employee.last}',${roleID},${isManager});`
+                  )
+                  .then((err) => {
+                    if (err) throw err;
+                    console.log(`Employee added!`);
+                    start();
+                  });
+              });
+          }
+        );
+        break;
+      case "Remove":
+        app.query(
+          `SELECT id, concat(employees.first_name, " ", employees.last_name) AS name FROM employees;`,
+          async (err, res) => {
+            var employeeList = await res.map((role) => role.name);
+            inquirer
+              .prompt({
+                name: "employee",
+                message: "Pick an employee to delete:",
+                type: "list",
+                choices: employeeList,
+              })
+              .then((remove) => {
+                console.log(remove);
+                let removeID;
+                for (i = 0; i < res.length; i++) {
+                  if (remove.employee === res[i].name) {
+                    removeID = res[i].id;
+                  }
                 }
                 app.query(
-                  `INSERT INTO employees (first_name, last_name, role_id, ismanager)
-                  VALUES ('${employee.first}','${employee.last}',${roleID},${isManager});`
-                )
-                .then((err) => {
-                  if (err) throw err;
-                  console.log(`Employee added!`)
-                  start();
-                })
-              })
-            })
-            break;
-            case "Remove":
-              app.query(
-                `SELECT id, concat(employees.first_name, " ", employees.last_name) AS name FROM employees;`,
-                async (err, res) => {
-                  var employeeList = await res.map((role) => role.name);
-                  inquirer
-                  .prompt({
-                    name: "employee",
-                    message: "Pick an employee to delete:",
-                    type: "list",
-                    choices: employeeList,
-                  })
-                  .then((remove) => {
-                    console.log(remove)
-                    let removeID;
-                    for (i = 0; i < res.length; i++) {
-                      if (remove.employee === res[i].name) {
-                        removeID = res[i].id;
-                      }
-                    }
-                    app.query(
-                      `DELETE FROM employees WHERE id = ${removeID}`,
-                      async (err) => {
-                        if (err) throw err;
-                        console.log(`${remove.employee} has been removed!`)
-                        start();
-                      }
-                    )
-                  })
-                }
-              )
+                  `DELETE FROM employees WHERE id = ${removeID}`,
+                  (err) => {
+                    if (err) throw err;
+                    console.log(`${remove.employee} has been removed!`);
+                    start();
+                  }
+                );
+              });
+          }
+        );
     }
   });
 }
 
-// function editRoles() {
-//   app.query(
-//     `SELECT roles.id, roles.job, roles.salary, departments.name AS department
-//     FROM roles
-//     INNER JOIN departments ON roles.dep_id = departments.id
-//     ORDER by department ASC`,
-//     (err, res) => {
-//       if (err) throw err;
-//       console.log(
-//         "---------------------------------------------------------------------------------------"
-//       );
-//       console.log(`ALL ROLES`);
-//       console.log(
-//         "---------------------------------------------------------------------------------------"
-//       );
-//       console.table(res);
-//       start();
-//     }
-//   );
-// }
-
+function editRoles() {
+  inquirer.prompt(mainQs[3]).then((data) => {
+    switch (data.EditR) {
+      case "Add":
+        app.query(
+          `SELECT * FROM departments;`,
+          async (err, res) => {
+          if (err) throw err;
+          var depList = await res.map((dep) => dep.name);
+          inquirer
+            .prompt([
+              {
+                name: "job",
+                message: "Name of new job: ",
+                type: "input",
+              },
+              {
+                name: "salary",
+                message: "Input salary of new job: ",
+                type: "input",
+              },
+              {
+                name: "dep",
+                message: "Select department: ",
+                type: "list",
+                choices: depList,
+              },
+            ])
+            .then((role) => {
+              let depID;
+              for (i = 0; i < res.length; i++) {
+                if (role.dep === res[i].name) {
+                  depID = res[i].id;
+                }
+              }
+              app.query(
+                `INSERT INTO roles (job, salary, dep_id)
+                VALUES ('${role.job}','${role.salary}',${depID});`,
+                (err) => {
+                  if (err) throw err;
+                  console.log(`${role.job} has been added to ${role.dep}`);
+                  start();
+                }
+              );
+            });
+        });
+        case "Remove":
+          app.query(
+            `SELECT * FROM roles;`,
+            async (err, res) => {
+              console.log(res)
+              var roleList = await res.map((role) => role.job);
+              inquirer
+              .prompt([
+                {
+                  name: "role",
+                  message: "Select a role to delete: ",
+                  type: "list",
+                  choices: roleList,
+                },
+              ]).then((remove) => {
+                let roleID;
+                for (i = 0; i < res.length; i++) {
+                  if (remove.role === res[i].job) {
+                    roleID = res[i].id;
+                  }
+                }
+                app.query(
+                  `DELETE FROM roles
+                  WHERE id = ${roleID}`,
+                  (err) => {
+                    if (err) throw err;
+                    console.log(`${remove.role} removed!`);
+                    start();
+                  }
+                )
+              })
+            }
+          )
+    }
+  });
+}
 
 function start() {
   inquirer.prompt(mainQs[0]).then((data) => {
@@ -392,6 +450,9 @@ function start() {
         break;
       case "Edit Employees":
         editEmployees();
+        break;
+      case "Edit Roles":
+        editRoles();
         break;
     }
   });
