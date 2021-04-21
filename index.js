@@ -1,7 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 const consTable = require("console.table");
-const dotenv = require("dotenv");
 
 const app = mysql.createConnection({
   host: "localhost",
